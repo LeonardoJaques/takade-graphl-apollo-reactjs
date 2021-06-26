@@ -1,8 +1,0 @@
-{
-  "prettier.resolveGlobalModules": true,
-  "prettier.useTabs": true,
-  "prettier.withNodeModules": true,
-  "prettier.jsxSingleQuote": true,
-  "prettier.jsxBracketSameLine": true,
-  "prettier.enableDebugLogs": true
-}
