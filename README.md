@@ -1,1 +1,1 @@
-# takede-graphl-apollo-reactjs
+# takade-graphl-apollo-reactjs
