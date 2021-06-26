@@ -1,0 +1,17 @@
+Backend(GraphQl API with NodeJS and MongoDB)
+  Bootstrap the project:
+    ✔ Follow the getting started guide: https://www.apollographql.com/docs/apollo-server/getting-started/ @done (6/26/2021, 2:45:14 PM)
+    ✔ Execute your first query @done (6/26/2021, 2:45:15 PM)
+    ✔ Setup nodemon to restart the server changes @done (6/26/2021, 3:06:31 PM)
+  Database MongoDB:
+    ✔ Create a project in MongoDB Atlas: https://cloud.mongodb.com/ @done (6/26/2021, 4:49:51 PM)
+    ✔ Setup cluster @done (6/26/2021, 4:49:52 PM)
+    ✔ Install mongodb ad dotenv package @done (6/26/2021, 4:49:53 PM)
+    ✔ Connect to MongoDB @done (6/26/2021, 4:49:54 PM)
+  GraphQl Schema:
+    ☐ User
+    ☐ Task List
+    ☐ ToDo
+  Authentication:
+    ☐ Setup signIn and signUp mutation
+    ☐ Encrypt password
