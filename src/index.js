@@ -1,13 +1,23 @@
 const { ApolloServer, gql } = require('apollo-server');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectID } = require('mongodb');
 
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 dotenv.config();
 
 process.env.DB_URI;
-const { DB_URI, DB_NAME } = process.env;
+const { DB_URI, DB_NAME, JWT_SECRET } = process.env;
+
+const getToken = (user) => jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7 days' });
+const getUserFromToken = async (token, db) => {
+	const tokenData = jwt.verify(token, JWT_SECRET);
+	if (!tokenData?.id) {
+		return null;
+	}
+	return await db.collection('Users').findOne({ _id: ObjectID(tokenData.id) });
+};
 
 const typeDefs = gql`
 	type Query {
@@ -66,6 +76,7 @@ const resolvers = {
 		myTaskList: () => [],
 	},
 	Mutation: {
+		// signUp: async (_, { input }, { db, user }) => {
 		signUp: async (_, { input }, { db }) => {
 			const hashedPassword = bcrypt.hashSync(input.password);
 			const newUser = {
@@ -77,26 +88,19 @@ const resolvers = {
 			const user = result.ops[0];
 			return {
 				user,
-				token: 'token',
+				token: getToken(user),
 			};
 		},
 		signIn: async (_, { input }, { db }) => {
 			const user = await db.collection('Users').findOne({ email: input.email });
-			if (!user) {
-				throw new Error('Invalid credentials!');
-			}
-			// check if password is correct
-			const isPasswordCorrect = bcrypt.compareSync(
-				input.password,
-				user.password,
-			);
-			if (!isPasswordCorrect) {
+			const isPasswordCorrect = user && bcrypt.compareSync(input.password, user.password);
+			if (!user || !isPasswordCorrect) {
 				throw new Error('Invalid credentials!');
 			}
 
 			return {
 				user,
-				token: 'token',
+				token: getToken(user),
 			};
 		},
 	},
@@ -119,7 +123,18 @@ const start = async () => {
 
 	// The ApolloServer constructor requires two parameters: your schema
 	// definition and your set of resolvers.
-	const server = new ApolloServer({ typeDefs, resolvers, context });
+	const server = new ApolloServer({
+		typeDefs,
+		resolvers,
+		context: async ({ req }) => {
+			const user = await getUserFromToken(req.headers.authorization, db);
+
+			return {
+				db,
+				user,
+			};
+		},
+	});
 
 	// The `listen` method launches a web server.
 	server.listen().then(({ url }) => {
