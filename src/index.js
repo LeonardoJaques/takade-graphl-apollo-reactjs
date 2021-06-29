@@ -10,9 +10,12 @@ dotenv.config();
 process.env.DB_URI;
 const { DB_URI, DB_NAME, JWT_SECRET } = process.env;
 
-const getToken = (user) => jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7 days' });
+const getToken = (user) => jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30 days' });
 const getUserFromToken = async (token, db) => {
 	const tokenData = jwt.verify(token, JWT_SECRET);
+	console.log('====================================');
+	console.log(tokenData);
+	console.log('====================================');
 	if (!tokenData?.id) {
 		return null;
 	}
@@ -25,8 +28,10 @@ const typeDefs = gql`
 	}
 
 	type Mutation {
-		signUp(input: SignUpInput): AuthUser!
-		signIn(input: SignInInput): AuthUser!
+		signUp(input: SignUpInput!): AuthUser!
+		signIn(input: SignInInput!): AuthUser!
+
+		createTaskList(title: String!): TaskList!
 	}
 
 	input SignUpInput {
@@ -61,6 +66,7 @@ const typeDefs = gql`
 		users: [User!]!
 		todos: [ToDo!]!
 	}
+
 	type ToDo {
 		id: ID!
 		content: String!
@@ -76,7 +82,6 @@ const resolvers = {
 		myTaskList: () => [],
 	},
 	Mutation: {
-		// signUp: async (_, { input }, { db, user }) => {
 		signUp: async (_, { input }, { db }) => {
 			const hashedPassword = bcrypt.hashSync(input.password);
 			const newUser = {
@@ -103,6 +108,11 @@ const resolvers = {
 				token: getToken(user),
 			};
 		},
+		createTaskList: async (_, { title }, { db, user }) => {
+			if (!user) {
+				throw new Error('Authentication Error');
+			}
+		},
 	},
 	User: {
 		id: ({ _id, id }) => _id || id,
@@ -117,7 +127,7 @@ const start = async () => {
 	await client.connect();
 	const db = client.db(DB_NAME);
 
-	const context = {
+	let context = {
 		db,
 	};
 
@@ -128,7 +138,7 @@ const start = async () => {
 		resolvers,
 		context: async ({ req }) => {
 			const user = await getUserFromToken(req.headers.authorization, db);
-
+			console.log(req);
 			return {
 				db,
 				user,
