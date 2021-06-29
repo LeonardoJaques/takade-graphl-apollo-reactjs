@@ -7,15 +7,15 @@ const jwt = require('jsonwebtoken');
 
 dotenv.config();
 
-process.env.DB_URI;
 const { DB_URI, DB_NAME, JWT_SECRET } = process.env;
 
 const getToken = (user) => jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30 days' });
 const getUserFromToken = async (token, db) => {
+	if (!token) {
+		return null;
+	}
 	const tokenData = jwt.verify(token, JWT_SECRET);
-	console.log('====================================');
-	console.log(tokenData);
-	console.log('====================================');
+
 	if (!tokenData?.id) {
 		return null;
 	}
@@ -25,13 +25,16 @@ const getUserFromToken = async (token, db) => {
 const typeDefs = gql`
 	type Query {
 		myTaskList: [TaskList!]!
+		getTaskList(id: ID!): TaskList
 	}
 
 	type Mutation {
 		signUp(input: SignUpInput!): AuthUser!
 		signIn(input: SignInInput!): AuthUser!
-
 		createTaskList(title: String!): TaskList!
+		updateTaskList(id: ID!, title: String!): TaskList!
+		deleteTaskList(id: ID!): Boolean!
+		addUserToTaskList(taskListId: ID!, userId: ID!): TaskList
 	}
 
 	input SignUpInput {
@@ -59,7 +62,7 @@ const typeDefs = gql`
 	}
 	type TaskList {
 		id: ID!
-		createAt: String!
+		createdAt: String!
 		title: String!
 		progress: Float!
 
@@ -79,7 +82,19 @@ const typeDefs = gql`
 
 const resolvers = {
 	Query: {
-		myTaskList: () => [],
+		myTaskList: async (_, __, { db, user }) => {
+			if (!user) {
+				throw new Error('Authentication Error. Please sign in');
+			}
+			return await db.collection('TaskList').find({ userIds: user._id }).toArray();
+		},
+		getTaskList: async (_, { id }, { db, user }) => {
+			if (!user) {
+				throw new Error('Authentication Error. Please sign in');
+			}
+
+			return await db.collection('TaskList').findOne({ _id: ObjectID(id) });
+		},
 	},
 	Mutation: {
 		signUp: async (_, { input }, { db }) => {
@@ -110,12 +125,74 @@ const resolvers = {
 		},
 		createTaskList: async (_, { title }, { db, user }) => {
 			if (!user) {
-				throw new Error('Authentication Error');
+				throw new Error('Authentication Error. Please sign in');
 			}
+			const newTaskList = {
+				title,
+				createdAt: new Date().toISOString(),
+				userIds: [user._id],
+			};
+			const result = await db.collection('TaskList').insert(newTaskList);
+			return result.ops[0];
+		},
+		updateTaskList: async (_, { id, title }, { db, user }) => {
+			if (!user) {
+				throw new Error('Authentication Error. Please sign in');
+			}
+			const result = await db.collection('TaskList').updateOne(
+				{
+					_id: ObjectID(id),
+				},
+				{
+					$set: {
+						title,
+					},
+				},
+			);
+			return await db.collection('TaskList').findOne({ _id: ObjectID(id) });
+		},
+		deleteTaskList: async (_, { id }, { db, user }) => {
+			if (!user) {
+				throw new Error('Authentication Error. Please sign in');
+			}
+			//TODO only collaborators of this task list should be able to delete
+			await db.collection('TaskList').removeOne({ _id: ObjectID(id) });
+			return true;
+		},
+		addUserToTaskList: async (_, { taskListId, userId }, { db, user }) => {
+			if (!user) {
+				throw new Error('Authentication Error. Please sign in');
+			}
+
+			const taskList = await db.collection('TaskList').findOne({ _id: ObjectID(taskListId) });
+			if (!taskList) {
+				return null;
+			}
+			if (taskList.userIds.find((dbId) => dbId.toString() === userId.toString())) {
+				return taskList;
+			}
+			await db.collection('TaskList').updateOne(
+				{
+					_id: ObjectID(taskListId),
+				},
+				{
+					$push: {
+						userIds: ObjectID(userId),
+					},
+				},
+			);
+			taskList.userIds.push(ObjectID(userId));
+			return taskList;
 		},
 	},
 	User: {
 		id: ({ _id, id }) => _id || id,
+	},
+	TaskList: {
+		id: ({ _id, id }) => _id || id,
+		progress: () => 0,
+		users: async ({ userIds }, _, { db }) =>
+			Promise.all(userIds.map((userId) => db.collection('Users').findOne({ _id: userId }))),
 	},
 };
 
