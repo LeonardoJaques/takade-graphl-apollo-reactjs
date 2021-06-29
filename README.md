@@ -1,4 +1,4 @@
-# takade-graphl-apollo-reactjs
+# Takade Graphl Apollo React-Js
 
 ## Backend(GraphQl API with NodeJS and MongoDB)
 
