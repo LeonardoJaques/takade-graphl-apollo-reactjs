@@ -39,7 +39,7 @@
 * ✔ getTaskList @done (6/29/2021, 3:55:22 PM)
 * ✔ Invite User To TaskList @done (6/29/2021, 5:53:14 PM)
 
-### CRUD ToDo:
+### CRUD Todo:
 
 * ✔ Create ToDo @done (6/29/2021, 7:14:05 PM)
 * ✔ Connect ToDo with TaskList @done (6/29/2021, 7:39:18 PM)
