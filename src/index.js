@@ -134,7 +134,7 @@ const resolvers = {
 				createdAt: new Date().toISOString(),
 				userIds: [user._id],
 			};
-			const result = await db.collection('TaskList').insert(newTaskList);
+			const result = await db.collection('TaskList').insertOne(newTaskList);
 			return result.ops[0];
 		},
 		updateTaskList: async (_, { id, title }, { db, user }) => {
@@ -195,7 +195,7 @@ const resolvers = {
 				taskListId: ObjectID(taskListId),
 				isCompleted: false,
 			};
-			const result = await db.collection('ToDo').insert(newToDo);
+			const result = await db.collection('ToDo').insertOne(newToDo);
 			return result.ops[0];
 		},
 		updateToDo: async (_, data, { db, user }) => {
